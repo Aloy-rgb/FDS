@@ -267,7 +267,7 @@ public class ADDUI extends javax.swing.JFrame {
     String FirstName = firstname.getText();
     String LastName = lastname.getText();
     
-    // Combine names and store as the FK value
+    
     String personName = FirstName + " " + LastName; 
     
     String Phone = PN.getText();
@@ -275,6 +275,7 @@ public class ADDUI extends javax.swing.JFrame {
     
     // EventName comes from the text field
     String eventName = eventname.getText();
+    String finalEventName = eventName;
     
     // Basic Input Validation
     if (FirstName.isEmpty() || LastName.isEmpty() || Phone.isEmpty() || Email.isEmpty() || eventName.isEmpty()) {
@@ -290,19 +291,36 @@ public class ADDUI extends javax.swing.JFrame {
     
     Connection con = null;
     PreparedStatement pre = null;
+    ResultSet rs = null;
 
     try {
         con = DriverManager.getConnection("jdbc:mysql://localhost:3306/eventorganizer", "root", "Lyanmarc2004@");
         
-        // --- 2. Save the Person Record (INSERT into 'person' table) ---
+        int counter = 1;
+        boolean isDuplicate = true;
+        
+        while (isDuplicate) {
+            pre = con.prepareStatement("SELECT EventName FROM person WHERE EventName = ?");
+            pre.setString(1, finalEventName);
+            rs = pre.executeQuery();
+
+            if (rs.next()) {
+                counter++;
+                finalEventName = eventName + "_" + counter;
+            } else {
+                isDuplicate = false;
+            }
+            if (rs != null) rs.close();
+            if (pre != null) pre.close();
+        }
+        
         pre = con.prepareStatement("INSERT INTO person(PersonID, PersonName, Phone, Email, EventName) VALUES (?,?,?,?,?)");
         
         pre.setString(1, PersonID);
         pre.setString(2, personName); 
         pre.setString(3, Phone);
         pre.setString(4, Email);
-        pre.setString(5, eventName); 
-        
+        pre.setString(5, finalEventName);
         pre.executeUpdate();
         JOptionPane.showMessageDialog(null, "Customer details saved successfully!");
         
@@ -319,6 +337,7 @@ public class ADDUI extends javax.swing.JFrame {
         JOptionPane.showMessageDialog(this, "Database Error: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
     } finally {
         // Close resources
+        try { if (rs != null) rs.close(); } catch (SQLException e) { /* log error */ }
         try { if (pre != null) pre.close(); } catch (SQLException e) { /* log error */ }
         try { if (con != null) con.close(); } catch (SQLException e) { /* log error */ }
     }
